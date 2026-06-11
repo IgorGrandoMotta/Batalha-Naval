@@ -155,7 +155,7 @@ def frota_player(tabuleiro):
         posicionados = []
         while True:
             try:   
-                navio = int(input("Opção: ","\n"))
+                navio = int(input("Opção: "))
             except ValueError:
                 print("Digite apenas opções de navios validas!")
             if navio >= 1 and navio <= 6:
