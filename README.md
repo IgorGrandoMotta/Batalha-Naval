@@ -1,4 +1,4 @@
-# Batalha-Naval# ⚓ Batalha Naval
+# ⚓ Batalha Naval
 
 Jogo de Batalha Naval para dois jogadores (você vs. computador), rodando no terminal com interface visual colorida.
 
@@ -109,3 +109,153 @@ BatalhaNaval/
 ├── waterexplosion.wav    ← som de erro
 └── README.md             ← este arquivo
 ```
+
+---
+
+## 🧠 Explicação do código
+
+### Variáveis globais
+
+No topo do arquivo são definidas as configurações gerais do jogo:
+
+```python
+linhas = 10
+colunas = 10
+n_navios = 6
+```
+
+Definem o tamanho do tabuleiro (10x10) e a quantidade de navios. Também são definidos os emojis usados para representar cada estado de célula:
+
+```python
+vazio = "🌊"   # célula ainda não atacada
+acerto = "💥"  # célula onde um navio foi atingido
+erro = "💨"    # célula atacada mas sem navio
+```
+
+Os navios são representados por números de 1 a 6 dentro do tabuleiro.
+
+---
+
+### `tocar_som(arquivo)`
+
+Toca um arquivo de áudio `.wav` usando o PowerShell do Windows. Usa `subprocess.Popen` para rodar o comando em segundo plano sem travar o jogo. Se der qualquer erro (arquivo não encontrado, sistema diferente), o `try/except` ignora silenciosamente e o jogo continua normalmente.
+
+---
+
+### `introducao()`
+
+Exibe a tela inicial do jogo com:
+- O título "BATALHA NAVAL" em um painel estilizado
+- Uma tabela com todos os 6 navios, seus tamanhos e símbolos
+- Um painel com as regras do jogo
+
+Usa apenas funções da biblioteca `rich` para formatação visual no terminal.
+
+---
+
+### `tabuleiro()`
+
+Cria e retorna um tabuleiro vazio: uma matriz (lista de listas) de 10x10 posições, onde todas as células começam com o valor `vazio` (🌊).
+
+```python
+return [[vazio] * colunas for o in range(linhas)]
+```
+
+Cada partida cria 4 tabuleiros: o real do jogador, o real da CPU, e um visual de cada um (o que é mostrado na tela).
+
+---
+
+### `imprimir_tabuleiro(tab, titulo, cor_titulo)`
+
+Recebe um tabuleiro e o exibe no terminal de forma visual usando a biblioteca `rich`. Percorre cada célula da matriz e transforma o valor em um emoji colorido:
+
+| Valor na matriz | Exibição |
+|-----------------|----------|
+| `vazio` (🌊) | 🌊 azul |
+| `acerto` (💥) | 💥 vermelho |
+| `erro` (💨) | 💨 ciano |
+| `1` a `6` | emoji do navio correspondente com cor |
+
+O título e a cor da borda são passados como parâmetros (verde para o tabuleiro do jogador, vermelho para o inimigo).
+
+---
+
+### `verificar(tabuleiro, linha, coluna, tamanho, direcao)`
+
+Verifica se é possível posicionar um navio em determinada posição antes de colocá-lo. Checa duas condições para cada célula que o navio ocuparia:
+
+- Se a posição não ultrapassa os limites do tabuleiro (0–9)
+- Se a célula está vazia (sem outro navio)
+
+Retorna `True` se o posicionamento é válido, ou `False` caso contrário. A direção `1` é horizontal (ocupa colunas) e `2` é vertical (ocupa linhas).
+
+---
+
+### `verificar_fim(tabuleiro)`
+
+Percorre o tabuleiro inteiro verificando se ainda existe algum navio que não foi afundado. Um navio sobrevivente é qualquer célula que não seja `vazio`, `acerto` ou `erro` — ou seja, qualquer célula com valor de 1 a 6.
+
+Retorna `True` se todos os navios foram destruídos (fim de jogo), ou `False` se ainda há navios restantes.
+
+---
+
+### `navio_player(tabuleiro, linha, coluna, tamanho, direcao, navio)`
+
+Efetivamente posiciona um navio no tabuleiro. Primeiro chama `verificar()` para checar se a posição é válida. Se for, percorre as células que o navio ocupa e grava o número do navio (1 a 6) em cada uma delas. Retorna `True` se conseguiu posicionar, `False` caso contrário.
+
+---
+
+### `frota_player(tabuleiro)`
+
+Gerencia o posicionamento da frota completa do jogador. Oferece duas opções:
+
+**Opção 1 — Automático:** sorteia aleatoriamente direção, linha e coluna para cada navio e tenta posicioná-lo. Repete até conseguir posicionar os 6 navios sem sobreposição.
+
+**Opção 2 — Manual:** exibe um menu com os 6 navios e pede ao jogador que informe qual navio quer posicionar, a direção (1 = horizontal, 2 = vertical), a coluna inicial e a linha inicial. Valida cada entrada e exige que todos os 6 navios sejam posicionados antes de seguir.
+
+---
+
+### `frota_cpu(tabuleiro)`
+
+Funciona igual à opção automática do `frota_player`, mas sem interação com o usuário. Posiciona os 6 navios da CPU de forma completamente aleatória no tabuleiro. O jogador nunca vê esse tabuleiro diretamente.
+
+---
+
+### `ataque(tabuleiro_adv, tabuleiro_visual, linha, coluna, quem)`
+
+Processa um ataque em uma posição do tabuleiro adversário. Existem três casos possíveis:
+
+- **Posição já atacada:** avisa que a coordenada já foi usada e não faz nada.
+- **Posição vazia:** marca como `erro` nos dois tabuleiros (real e visual) e toca o som de água.
+- **Posição com navio:** marca como `acerto`, toca o som de explosão e verifica se o navio inteiro foi afundado (se não restar nenhuma célula com o número daquele navio no tabuleiro).
+
+O parâmetro `quem` indica se foi o jogador ou a CPU atacando, para exibir a mensagem correta.
+
+---
+
+### `turno_player(tabuleiro_adv, tabuleiro_visual)`
+
+Gerencia o turno do jogador. Pede linha e coluna como entrada, valida se os valores estão entre 0 e 9, e chama `ataque()`. Se o jogador digitar algo inválido ou fora do intervalo, exibe uma mensagem de erro e pede novamente.
+
+---
+
+### `turno_cpu(tabuleiro_adv, tabuleiro_visual)`
+
+Gerencia o turno do computador. Sorteia linha e coluna aleatoriamente em um loop `while True`, e só ataca quando encontrar uma posição que ainda não foi atacada (valor `vazio` no tabuleiro visual da CPU). Exibe as coordenadas escolhidas para o jogador acompanhar.
+
+---
+
+### `main()`
+
+Função principal que orquestra todo o jogo. Ela:
+
+1. Cria os 4 tabuleiros (real e visual de cada jogador)
+2. Chama `introducao()` para exibir a tela inicial
+3. Chama `frota_player()` e `frota_cpu()` para posicionar as frotas
+4. Entra no loop principal do jogo:
+   - Executa o turno do jogador
+   - Verifica se o jogador venceu com `verificar_fim()`
+   - Executa o turno da CPU
+   - Verifica se a CPU venceu com `verificar_fim()`
+   - Imprime os dois tabuleiros atualizados
+5. Ao sair do loop, exibe a mensagem de vitória ou derrota
